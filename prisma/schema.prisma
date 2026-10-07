@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id            String         @id @default(uuid())
+  fullName      String
+  username      String         @unique
+  email         String         @unique
+  passwordHash  String
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  lastLogin     DateTime?
+  favourites    Favourite[]
+  shoppingLists ShoppingList[]
+}
+
+model Retailer {
+  id            String      @id @default(uuid())
+  name          String      @unique
+  logoUrl       String?
+  description   String?
+  website       String?
+  contactNumber String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  stores        Store[]
+  catalogues    Catalogue[]
+  prices        Price[]
+}
+
+model Store {
+  id          String   @id @default(uuid())
+  retailerId  String
+  storeName   String
+  address     String
+  city        String
+  latitude    Float
+  longitude   Float
+  openingTime String?
+  closingTime String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  retailer Retailer @relation(fields: [retailerId], references: [id], onDelete: Cascade)
+  stock    Stock[]
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  categoryId  String
+  name        String
+  brand       String
+  barcode     String?  @unique
+  description String?
+  imageUrl    String?
+  unit        String   // e.g., "kg", "750ml", "pack"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category          Category           @relation(fields: [categoryId], references: [id])
+  prices            Price[]
+  stock             Stock[]
+  favourites        Favourite[]
+  shoppingListItems ShoppingListItem[]
+}
+
+model Price {
+  id            String   @id @default(uuid())
+  productId     String
+  retailerId    String
+  price         Decimal  @db.Decimal(10, 2)
+  isPromotional Boolean  @default(false)
+  promoDetails  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  retailer Retailer @relation(fields: [retailerId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, retailerId])
+}
+
+model Stock {
+  id        String   @id @default(uuid())
+  productId String
+  storeId   String
+  inStock   Boolean  @default(true)
+  quantity  Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, storeId])
+}
+
+model Catalogue {
+  id         String   @id @default(uuid())
+  retailerId String
+  title      String
+  validFrom  DateTime
+  validTo    DateTime
+  pdfUrl     String?
+  createdAt  DateTime @default(now())
+
+  retailer Retailer @relation(fields: [retailerId], references: [id], onDelete: Cascade)
+}
+
+model Favourite {
+  id        String   @id @default(uuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+}
+
+model ShoppingList {
+  id        String             @id @default(uuid())
+  userId    String
+  name      String
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     ShoppingListItem[]
+}
+
+model ShoppingListItem {
+  id             String   @id @default(uuid())
+  shoppingListId String
+  productId      String
+  quantity       Int      @default(1)
+  createdAt      DateTime @default(now())
+
+  shoppingList ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  product      Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([shoppingListId, productId])
+}
