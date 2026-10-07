@@ -23,6 +23,8 @@ model User {
   updatedAt     DateTime       @updatedAt
   lastLogin     DateTime?
   favourites    Favourite[]
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
   shoppingLists ShoppingList[]
 }
 
